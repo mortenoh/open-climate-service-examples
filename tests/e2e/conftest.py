@@ -23,7 +23,6 @@ from pathlib import Path
 
 import httpx
 import pytest
-import uvicorn
 
 # A small extent over Rwanda — CHIRPS is global, so clipping here keeps each ingested
 # day to a few hundred kilobytes. Matches the sample geometry in ocs_examples.geometry,
@@ -38,13 +37,6 @@ def _free_port() -> int:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.bind(("127.0.0.1", 0))
         return int(sock.getsockname()[1])
-
-
-class _ThreadedServer(uvicorn.Server):
-    """A uvicorn server that runs in a thread without installing signal handlers."""
-
-    def install_signal_handlers(self) -> None:  # noqa: D102 - override to no-op
-        return
 
 
 def _wait_healthy(url: str, timeout: float = 60.0) -> None:
@@ -95,6 +87,10 @@ def base_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     )
     os.environ["CLIMATE_SERVICE_CONFIG"] = str(config_file)
 
+    # uvicorn and the server package are only needed for the in-process path, so import
+    # them here — `make test` (without the e2e group) never reaches this branch.
+    import uvicorn
+
     # Reset the cached config, then build the app now that the env points at our YAML.
     from open_climate_service import config as api_config
 
@@ -104,7 +100,9 @@ def base_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
     app = create_app()
 
     port = _free_port()
-    server = _ThreadedServer(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    server = uvicorn.Server(uvicorn.Config(app, host="127.0.0.1", port=port, log_level="warning"))
+    # Running in a thread, not the main one — suppress uvicorn's signal-handler install.
+    server.install_signal_handlers = lambda: None
     thread = threading.Thread(target=server.run, daemon=True)
     thread.start()
 

@@ -129,9 +129,10 @@ To also run the end-to-end suite (which boots a real instance), install the serv
 make install-e2e    # uv sync --all-extras --group e2e
 ```
 
-> This repo resolves `open-climate-service` from the sibling checkout at
-> `../open-climate-service` and `dhis2-client` from git (see `[tool.uv.sources]` in
-> `pyproject.toml`). Point these at a package index once the packages are published there.
+> This repo installs `open-climate-service` and `dhis2-client` straight from GitHub (see
+> `[tool.uv.sources]` in `pyproject.toml`); `uv.lock` pins them to specific commits. To
+> develop against a local checkout instead, point the `open-climate-service` source at a
+> path, e.g. `{ path = "../open-climate-service", editable = false }`.
 
 ---
 

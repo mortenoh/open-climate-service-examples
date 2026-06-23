@@ -62,10 +62,12 @@ override-dependencies = [
   "pystac>=1.10",
 ]
 
-# Resolve the sibling checkout and the DHIS2 client during local development.
-# Drop these once the packages are published to an index you can reach.
+# Install the libraries straight from GitHub so the repo is self-contained. To develop
+# against a local checkout instead, override the open-climate-service source, e.g.:
+#   uv sync --no-sources  (then point at a path), or temporarily set
+#   open-climate-service = { path = "../open-climate-service", editable = false }
 [tool.uv.sources]
-open-climate-service = { path = "../open-climate-service", editable = false }
+open-climate-service = { git = "https://github.com/dhis2/open-climate-service.git" }
 dhis2-client = { git = "https://github.com/dhis2/dhis2-python-client.git" }
 
 [build-system]
@@ -121,7 +123,7 @@ mypy_path = ["src"]
 # Third-party clients used by the examples ship without (complete) type
 # information; don't let their missing stubs fail the type check.
 [[tool.mypy.overrides]]
-module = ["openeo.*", "dhis2_client.*", "open_climate_service.*", "icechunk.*"]
+module = ["openeo.*", "dhis2_client.*", "open_climate_service.*", "icechunk.*", "uvicorn.*"]
 ignore_missing_imports = true
 
 [tool.pyright]
