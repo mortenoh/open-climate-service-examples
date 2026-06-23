@@ -89,6 +89,11 @@ Every instance ships these templates. Credentials, where needed, are configured 
 - **WorldPop Global2** is gridded population at 100 m (estimates through the present,
   projections to 2030). It needs the extent's ISO `country_code`.
 
+The resolutions above are the sources' **native** grids — CHIRPS cells are ~0.05°
+(~5.5 km), ERA5-Land ~0.1° (~11 km). Over a small country a dataset is only a few dozen
+cells wide, so the map looks blocky, but each cell really is 5–11 km; it is not
+downsampled. These are about as fine as these gridded climate products get.
+
 Two built-in **workflows** (stored openEO processes) turn any of these into import-ready
 output:
 
@@ -260,7 +265,8 @@ curated set of the example scripts as real subprocesses against the live instanc
 
 ```bash
 make install-e2e          # full server stack (uv sync --group e2e)
-make test-e2e             # uv run pytest -m e2e
+make test-e2e             # boot the server in-process, then run the suite
+make test-e2e-docker      # build the Docker image, run the suite against a container
 ```
 
 - `tests/e2e/test_flow.py` — health, discovery, open with xarray, aggregate to CHAP CSV.
@@ -270,6 +276,25 @@ make test-e2e             # uv run pytest -m e2e
 
 The default keyless path ingests a 3-day CHIRPS slice over a small Rwanda extent (a few
 hundred kB). The ERA5 test additionally needs Copernicus CDS credentials.
+
+### Against a Docker container
+
+`make test-e2e-docker` builds the image from `../open-climate-service`, runs it with a
+small Rwanda extent and any credentials from `.env`, and points the same suite at the
+container. The runner is `scripts/e2e_docker.sh`, configurable via environment:
+
+```bash
+make test-e2e-docker                       # build, run, test, tear down
+KEEP=1 make test-e2e-docker                # leave the container up for inspection
+NO_BUILD=1 PORT=8090 make test-e2e-docker  # reuse the existing image on another port
+```
+
+The suite targets an externally running instance whenever `OCS_E2E_BASE_URL` is set, so
+you can also point it at an instance you started yourself:
+
+```bash
+OCS_E2E_BASE_URL=http://127.0.0.1:8000 uv run pytest -m e2e
+```
 
 ---
 

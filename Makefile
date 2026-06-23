@@ -1,4 +1,4 @@
-.PHONY: help install install-e2e lint test test-e2e clean
+.PHONY: help install install-e2e lint test test-e2e test-e2e-docker clean
 
 # ==============================================================================
 # Venv
@@ -20,7 +20,8 @@ help:
 	@echo "  install-e2e  Install the e2e group (full server stack)"
 	@echo "  lint         Run linter and type checker"
 	@echo "  test         Run tests (excludes e2e)"
-	@echo "  test-e2e     Run end-to-end tests (boots a server, downloads data)"
+	@echo "  test-e2e     Run end-to-end tests (boots a server in-process)"
+	@echo "  test-e2e-docker Run end-to-end tests against a Docker container"
 	@echo "  clean        Clean up temporary files"
 	@echo ""
 	@echo "Run an individual example with:"
@@ -49,6 +50,10 @@ test:
 test-e2e:
 	@echo ">>> Running end-to-end tests (boots a server and downloads data)"
 	@$(UV) run pytest -v -m e2e
+
+test-e2e-docker:
+	@echo ">>> Running end-to-end tests against a Docker container"
+	@./scripts/e2e_docker.sh
 
 clean:
 	@echo ">>> Cleaning up"

@@ -47,9 +47,34 @@ class _ThreadedServer(uvicorn.Server):
         return
 
 
+def _wait_healthy(url: str, timeout: float = 60.0) -> None:
+    """Block until ``{url}/health`` responds successfully, or raise."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if httpx.get(f"{url}/health", timeout=2.0).is_success:
+                return
+        except httpx.HTTPError:
+            pass
+        time.sleep(0.5)
+    raise RuntimeError(f"instance at {url} did not become healthy within {timeout:.0f}s")
+
+
 @pytest.fixture(scope="session")
 def base_url(tmp_path_factory: pytest.TempPathFactory) -> Iterator[str]:
-    """Boot an instance configured for a small extent and yield its base URL."""
+    """Yield the base URL of the instance under test.
+
+    When ``OCS_E2E_BASE_URL`` is set (e.g. a Docker container), target that instance and
+    do not boot anything. Otherwise boot the server in-process on an ephemeral port.
+    """
+    external = os.environ.get("OCS_E2E_BASE_URL")
+    if external:
+        external = external.rstrip("/")
+        _wait_healthy(external)
+        os.environ["OCS_BASE_URL"] = external
+        yield external
+        return
+
     config_dir = tmp_path_factory.mktemp("instance")
     (config_dir / "data").mkdir()
     config_file = config_dir / "climate-service.yaml"
