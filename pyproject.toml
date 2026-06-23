@@ -1,0 +1,143 @@
+[project]
+name = "open-climate-service-examples"
+version = "0.1.0"
+description = "Runnable examples for the Open Climate Service client, openEO, and DHIS2 integration"
+readme = "README.md"
+authors = [{ name = "Morten Hansen", email = "morten@winterop.com" }]
+license = { text = "BSD-3-Clause" }
+requires-python = ">=3.13"
+keywords = ["dhis2", "climate", "openeo", "stac", "zarr", "examples"]
+
+# Base install = the Open Climate Service client with the xarray extra, so every
+# data-access example can open published datasets as in-memory xarray objects.
+dependencies = [
+  "open-climate-service[xarray]>=0.1.0",
+  "httpx>=0.28.1",
+  "pydantic>=2.10",
+  "pydantic-settings>=2.6",
+  "geojson-pydantic>=2.1.0",
+  "icechunk>=2.0.6",
+]
+
+# Heavier, optional integrations. `make install` pulls them all in via
+# `uv sync --all-extras`; install individually for a lighter footprint.
+[project.optional-dependencies]
+# The openEO Python client, used by the examples under examples/03_openeo.
+openeo = ["openeo>=0.35"]
+# The DHIS2 Web API client, used by the examples under examples/05_dhis2.
+dhis2 = ["dhis2-client"]
+
+[dependency-groups]
+dev = [
+  "mypy>=1.20.2",
+  "pyright>=1.1.409",
+  "ruff>=0.15.12",
+  "pytest>=9.0.3",
+]
+# End-to-end testing: boots a real Open Climate Service instance in-process, so it
+# needs the full server stack plus the openeo/dhis2 client extras. Opt in with
+# `uv sync --group e2e` (NOT pulled by `make install` / `--all-extras`).
+e2e = [
+  "open-climate-service[server]>=0.1.0",
+  "openeo>=0.35",
+  "uvicorn>=0.41.0",
+  "pytest>=9.0.3",
+]
+
+# Replicate the upstream override-dependencies so the [server] stack resolves when
+# Open Climate Service is consumed as a dependency (its own overrides do not apply to
+# downstream consumers). See the upstream pyproject.toml and the instance guide.
+[tool.uv]
+override-dependencies = [
+  "geojson-pydantic>=2.1.0",
+  "zarr>=3.1.6",
+  "pyarrow>=19.0",
+  "xarray>=2025.12.0",
+  "numpy>=2.2",
+  "dask>=2024.1.0",
+  "dask-geopandas>=0.4",
+  "geopandas>=1.1",
+  "xvec>=0.3",
+  "rioxarray>=0.17",
+  "pystac>=1.10",
+]
+
+# Resolve the sibling checkout and the DHIS2 client during local development.
+# Drop these once the packages are published to an index you can reach.
+[tool.uv.sources]
+open-climate-service = { path = "../open-climate-service", editable = false }
+dhis2-client = { git = "https://github.com/dhis2/dhis2-python-client.git" }
+
+[build-system]
+requires = ["uv_build>=0.9.0,<0.12.0"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-root = "src"
+module-name = "ocs_examples"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 120
+
+[tool.ruff.lint]
+fixable = ["ALL"]
+select = ["E", "W", "F", "I", "D"]
+ignore = ["D203", "D213"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**/*.py" = ["D"]
+"**/__init__.py" = ["D104"]
+"src/**/*.py" = ["D105", "D107"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+docstring-code-format = true
+docstring-code-line-length = "dynamic"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+norecursedirs = ["examples", ".git", ".venv", "__pycache__"]
+markers = [
+  "e2e: end-to-end tests that boot a real server and download data (deselect with '-m \"not e2e\"')",
+]
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+check_untyped_defs = true
+no_implicit_optional = true
+warn_unused_ignores = true
+strict_equality = true
+mypy_path = ["src"]
+
+# Third-party clients used by the examples ship without (complete) type
+# information; don't let their missing stubs fail the type check.
+[[tool.mypy.overrides]]
+module = ["openeo.*", "dhis2_client.*", "open_climate_service.*", "icechunk.*"]
+ignore_missing_imports = true
+
+[tool.pyright]
+include = ["src", "tests", "examples"]
+exclude = ["**/.venv"]
+pythonVersion = "3.13"
+typeCheckingMode = "strict"
+useLibraryCodeForTypes = true
+reportPrivateUsage = false
+reportUnusedFunction = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownParameterType = false
+reportUnknownVariableType = false
+reportMissingTypeArgument = false
+reportMissingTypeStubs = false
+reportUnknownLambdaType = false
+reportMissingImports = "warning"
+reportMissingModuleSource = false
